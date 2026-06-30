@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>長岡花火 席決め帳</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@600;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+  html,body{margin:0;padding:0;}
+  #root{
+    --bg:#0b1026; --bg2:#11173a; --panel:#171d44; --panel2:#1d2452;
+    --ink:#f4f1e8; --muted:#9aa3c7; --line:#2b3470;
+    --gold:#f5c451; --gold-soft:#ffd479; --no:#ff7a6b; --go:#8fd694;
+    font-family:'Zen Kaku Gothic New', -apple-system, "Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif;
+    color:var(--ink);
+    background:
+      radial-gradient(900px 500px at 80% -10%, #2a1d5e44, transparent),
+      radial-gradient(700px 400px at 10% 0%, #4d2a6e33, transparent),
+      linear-gradient(180deg, #0a0e22 0%, var(--bg) 40%, #0a0d20 100%);
+    min-height:100vh; padding:0 0 40px;
+  }
+  #root *{box-sizing:border-box;}
+  .nh-header{position:relative; padding:34px 22px 26px; overflow:hidden; text-align:center;}
+  .nh-eyebrow{margin:0; letter-spacing:.35em; font-size:11px; color:var(--gold-soft); opacity:.85;}
+  .nh-title{margin:6px 0 4px; font-family:'Shippori Mincho',serif; font-weight:700; font-size:40px; letter-spacing:.12em;
+    background:linear-gradient(180deg,#fff,var(--gold) 120%); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; text-shadow:0 0 28px #f5c4513a;}
+  .nh-sub{margin:0; font-size:12.5px; color:var(--muted);}
+  .nh-spark{position:absolute; border-radius:50%; filter:blur(1px); opacity:.7;}
+  .nh-spark-a{width:6px;height:6px;background:var(--gold);top:30px;left:24%;box-shadow:0 0 14px 4px #f5c45188;animation:tw 2.6s infinite;}
+  .nh-spark-b{width:5px;height:5px;background:var(--no);top:54px;right:26%;box-shadow:0 0 14px 4px #ff7a6b88;animation:tw 3.1s .6s infinite;}
+  @keyframes tw{0%,100%{opacity:.2;transform:scale(.7)}50%{opacity:.9;transform:scale(1.2)}}
+  .nh-tabs{display:flex; gap:6px; padding:0 14px; max-width:760px; margin:0 auto;}
+  .nh-tab{flex:1; padding:11px 8px; border:none; cursor:pointer; font-size:14px; font-weight:700; color:var(--muted); background:transparent; border-bottom:2px solid transparent; font-family:inherit; transition:.2s;}
+  .nh-tab.active{color:var(--gold-soft); border-bottom-color:var(--gold);}
+  .nh-badge{display:inline-block; margin-left:6px; font-size:11px; background:#ffffff14; color:var(--ink); border-radius:10px; padding:1px 7px;}
+  .nh-main{max-width:760px; margin:18px auto 0; padding:0 14px;}
+  .nh-card{background:linear-gradient(180deg,var(--panel),var(--bg2)); border:1px solid var(--line); border-radius:16px; padding:16px; margin-bottom:14px; box-shadow:0 10px 30px #00000040;}
+  .nh-addform{display:flex; flex-wrap:wrap; gap:12px; align-items:flex-end;}
+  .nh-field{display:flex; flex-direction:column; gap:5px; flex:1; min-width:120px;}
+  .nh-field-group{flex:1.2;}
+  .nh-field-seat{flex:1.6; min-width:160px;}
+  .nh-field-cap{flex:0 0 76px; min-width:76px;}
+  .nh-field-day{flex:0 0 110px; min-width:100px;}
+  .nh-field label{font-size:11.5px; color:var(--muted); letter-spacing:.04em;}
+  .nh-field input, .nh-field select{background:#0c1130; border:1px solid var(--line); color:var(--ink); border-radius:10px; padding:10px 12px; font-size:15px; font-family:inherit; outline:none;}
+  .nh-field input:focus, .nh-field select:focus{border-color:var(--gold);}
+  .nh-field select optgroup{color:var(--gold-soft); background:#0c1130;}
+  .nh-field select option{color:var(--ink); background:#0c1130;}
+  .nh-btn-primary{background:linear-gradient(180deg,var(--gold-soft),var(--gold)); color:#2a1c00; border:none; font-weight:700; font-size:14px; padding:11px 18px; border-radius:10px; cursor:pointer; font-family:inherit; white-space:nowrap; box-shadow:0 6px 18px #f5c45133;}
+  .nh-btn-primary:active{transform:translateY(1px);}
+  .nh-stats{display:flex; gap:8px; margin-bottom:14px;}
+  .nh-stat{flex:1; min-width:0; background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:12px 8px; text-align:center;}
+  .nh-stat-val{display:block; font-size:22px; font-weight:700; font-family:'Shippori Mincho',serif;}
+  .nh-stat-label{font-size:11.5px; color:var(--muted);}
+  .nh-stat-call .nh-stat-val{color:var(--gold);}
+  .nh-stat-join .nh-stat-val{color:var(--go);}
+  .nh-stat-no .nh-stat-val{color:var(--no);}
+  .nh-stat-sum .nh-stat-val{color:var(--gold-soft);}
+  .nh-list{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px;}
+  .nh-person{display:flex; align-items:center; flex-wrap:wrap; gap:8px 10px; background:var(--panel); border:1px solid var(--line); border-left-width:3px; border-radius:12px; padding:10px 12px;}
+  .nh-person.st-calling{border-left-color:var(--gold);}
+  .nh-person.st-joining{border-left-color:var(--go);}
+  .nh-person.st-declined{border-left-color:var(--no); opacity:.5;}
+  .nh-person.st-declined .nh-pname{text-decoration:line-through;}
+  .nh-pname{font-size:15.5px; font-weight:500;}
+  .nh-chip{font-size:11px; padding:2px 9px; border-radius:20px; border:1px solid;}
+  .nh-seg{display:inline-flex; margin-left:auto; border:1px solid var(--line); border-radius:9px; overflow:hidden;}
+  .nh-seg button{border:none; border-left:1px solid var(--line); background:#0c1130; color:var(--muted); font-family:inherit; font-size:12px; padding:7px 10px; cursor:pointer; white-space:nowrap;}
+  .nh-seg button:first-child{border-left:none;}
+  .nh-seg button.on-calling{background:var(--gold); color:#2a1c00; font-weight:700;}
+  .nh-seg button.on-joining{background:var(--go); color:#06210f; font-weight:700;}
+  .nh-seg button.on-declined{background:var(--no); color:#2a0a06; font-weight:700;}
+  .nh-del{width:26px;height:26px;border-radius:8px;border:1px solid var(--line);background:transparent;color:var(--no);cursor:pointer;font-size:16px;line-height:1;}
+  .nh-days{flex-basis:100%; display:flex; align-items:center; gap:6px; margin-top:2px;}
+  .nh-days-label{font-size:11px; color:var(--muted);}
+  .nh-daychip{border:1px solid var(--line); background:#0c1130; color:var(--muted); border-radius:8px; padding:5px 11px; font-size:12px; cursor:pointer; font-family:inherit;}
+  .nh-daychip.on{background:var(--go); color:#06210f; border-color:var(--go); font-weight:700;}
+  .nh-pool{background:#0c1130; border:1px dashed var(--line); border-radius:12px; padding:11px 14px; font-size:13.5px; color:var(--muted); margin-bottom:14px; display:flex; flex-direction:column; gap:5px;}
+  .nh-pool.warn{border-color:var(--no);}
+  .nh-pool strong{color:var(--ink);}
+  .nh-pool .day-ok{color:var(--go);}
+  .nh-pool .day-warn{color:#ffc7bf;}
+  .nh-block-head{display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom:12px;}
+  .nh-block-head h3{margin:0; font-size:17px; font-family:'Shippori Mincho',serif;}
+  .nh-block-info{margin:3px 0 0; font-size:12px; color:var(--muted);}
+  .nh-block-day{display:inline-block; background:#0c1130; border:1px solid var(--line); color:var(--gold-soft); border-radius:7px; padding:1px 8px; font-size:11.5px; margin-right:6px;}
+  .nh-block-tools{display:flex; align-items:center; gap:6px; flex-wrap:wrap; justify-content:flex-end;}
+  .nh-block-tools button{background:#0c1130; border:1px solid var(--line); color:var(--ink); width:30px; height:30px; border-radius:8px; cursor:pointer; font-size:15px;}
+  .nh-block-tools span{font-size:12.5px; color:var(--muted); min-width:34px; text-align:center;}
+  .nh-mini{width:auto !important; padding:0 12px; font-size:12px !important; color:var(--gold-soft) !important;}
+  .nh-seats{display:grid; grid-template-columns:repeat(auto-fill,minmax(96px,1fr)); gap:8px;}
+  .nh-seat{position:relative; min-height:62px; border:1.5px dashed var(--line); background:#0c1130; border-radius:12px; cursor:pointer; padding:8px 6px 6px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; font-family:inherit; color:var(--ink);}
+  .nh-seat.filled{border-style:solid;}
+  .nh-seat-num{position:absolute; top:4px; left:7px; font-size:10px; color:var(--muted);}
+  .nh-seat-name{font-size:13.5px; font-weight:600;}
+  .nh-seat-empty{font-size:12px; color:var(--muted);}
+  .nh-modal-bg{position:fixed; inset:0; background:#040616cc; display:flex; align-items:center; justify-content:center; padding:20px; z-index:20;}
+  .nh-modal{background:linear-gradient(180deg,var(--panel),var(--bg2)); border:1px solid var(--line); border-radius:16px; padding:18px; width:100%; max-width:340px; max-height:75vh; overflow:auto;}
+  .nh-modal h3{margin:0 0 12px; font-size:16px;}
+  .nh-modal .nh-modal-day{font-size:12px; color:var(--gold-soft); font-weight:400;}
+  .nh-picklist{list-style:none; margin:0 0 8px; padding:0; display:flex; flex-direction:column; gap:6px;}
+  .nh-picklist button{width:100%; text-align:left; background:#0c1130; border:1px solid var(--line); color:var(--ink); border-radius:10px; padding:11px 13px; cursor:pointer; font-family:inherit; font-size:14.5px; display:flex; justify-content:space-between; align-items:center;}
+  .nh-picklist button:active{border-color:var(--gold);}
+  .nh-pick-group{font-size:11px; color:var(--muted);}
+  .nh-send-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;}
+  .nh-send-head h3{margin:0; font-size:16px; font-family:'Shippori Mincho',serif;}
+  .nh-pre{white-space:pre-wrap; background:#0c1130; border:1px solid var(--line); border-radius:12px; padding:14px; font-size:13px; line-height:1.7; color:#e7e9f7; margin:10px 0;}
+  .nh-empty{text-align:center; color:var(--muted); padding:34px 16px; font-size:14px;}
+  .nh-footer{max-width:760px; margin:20px auto 0; padding:0 16px; display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; font-size:11.5px; color:var(--muted);}
+  .nh-footer-actions{display:flex; align-items:center; gap:14px;}
+  .nh-link{background:none; border:none; color:var(--no); cursor:pointer; font-size:11.5px; font-family:inherit; text-decoration:underline;}
+  .nh-link2{background:none; border:none; color:var(--gold-soft); cursor:pointer; font-size:11.5px; font-family:inherit; text-decoration:underline;}
+  .nh-sync{font-size:11.5px;}
+  .nh-sync-synced{color:var(--go);}
+  .nh-sync-saving{color:var(--gold-soft);}
+  .nh-sync-offline{color:var(--no);}
+  .nh-sync-idle{color:var(--muted);}
+  .nh-setup{max-width:520px; margin:0 auto; padding:36px 22px;}
+  .nh-setup .nh-title{text-align:center; margin-bottom:14px;}
+  .nh-setup-lead{font-size:14px; line-height:1.7; color:var(--ink); margin:0 0 16px;}
+  .nh-setup-steps{font-size:13.5px; line-height:1.8; color:var(--muted); background:#0c1130; border:1px solid var(--line); border-radius:12px; padding:14px 14px 14px 32px; margin:0 0 18px;}
+  .nh-setup-note{font-size:11.5px; color:var(--muted); margin-top:12px; line-height:1.6;}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+<script type="text/babel">
+const { useState, useEffect, useMemo, useRef } = React;
+
+const STORAGE_KEY = "nagaoka-hanabi:v1";
+const CFG_KEY = "nagaoka-hanabi:supabase";
+const sbHeaders = (c) => ({ "apikey": c.key, "Authorization": "Bearer " + c.key });
+const GROUP_COLORS = ["#f5c451","#ff7a6b","#6bb6ff","#8fd694","#c89bff","#ff9ecb","#7be0d3","#ffae5c"];
+
+// 2026年 公式観覧席（出典：長岡花火2026 公式チケット情報）。capacity は定員。
+const SEAT_TYPES = [
+  { area:"A", label:"マス席（A会場）", capacity:6 },
+  { area:"A", label:"ベンチ式マス席", capacity:8 },
+  { area:"A", label:"ベンチ席（A会場）", capacity:1 },
+  { area:"A", label:"イス席（A会場）", capacity:1 },
+  { area:"A", label:"テーブル席（A会場）", capacity:1 },
+  { area:"A", label:"カメラマン席（A会場）", capacity:2 },
+  { area:"A", label:"車いす席（A会場）", capacity:3 },
+  { area:"A", label:"障がい者席（A会場）", capacity:4 },
+  { area:"A", label:"フェニックスエリア席", capacity:1 },
+  { area:"A", label:"フェニックスイス席", capacity:1 },
+  { area:"A", label:"フェニックステーブル席", capacity:1 },
+  { area:"A", label:"フェニックスシート指定席", capacity:1 },
+  { area:"A", label:"三尺玉シート指定席", capacity:1 },
+  { area:"A", label:"三尺玉イス席", capacity:1 },
+  { area:"B", label:"マス席（B会場）", capacity:6 },
+  { area:"B", label:"堤防上マス席", capacity:6 },
+  { area:"B", label:"イス席（B会場）", capacity:1 },
+  { area:"B", label:"テーブル席（B会場）", capacity:1 },
+  { area:"B", label:"カメラマン席（B会場）", capacity:2 },
+  { area:"B", label:"陸上競技場イス席", capacity:1 },
+  { area:"B", label:"車いす席（B会場）", capacity:3 },
+  { area:"B", label:"障がい者席（B会場）", capacity:4 },
+  { area:"B", label:"てくてく前シート指定席", capacity:1 },
+  { area:"B", label:"北エリア席1", capacity:1 },
+  { area:"B", label:"北エリア席2", capacity:1 },
+  { area:"B", label:"てくてくエリア席", capacity:1 },
+  { area:"B", label:"西エリア席", capacity:1 },
+  { area:"B", label:"スターマインシート指定席", capacity:1 },
+  { area:"B", label:"南エリア席", capacity:1 },
+];
+const seatTypeByLabel = (label) => SEAT_TYPES.find((s) => s.label === label);
+const shortSeatName = (label) => label.replace(/（[AB]会場）/, "");
+
+const STATUS = { calling:{label:"声掛け中"}, joining:{label:"参加"}, declined:{label:"不参加"} };
+const STATUS_ORDER = ["calling", "joining", "declined"];
+
+const DAYS = ["8/2", "8/3"];
+const WEEKDAY = { "8/2":"日", "8/3":"月" };
+const dayLabel = (d) => d + "(" + (WEEKDAY[d] || "") + ")";
+
+const uid = () => (crypto?.randomUUID?.() || String(Date.now()) + Math.random().toString(16).slice(2));
+const clampCap = (n) => Math.max(1, Math.min(60, n));
+const enterGuard = (fn) => (e) => { if (e.key === "Enter" && !e.nativeEvent.isComposing) fn(); };
+
+const normPerson = (p) => ({
+  id: p.id || uid(), name: p.name || "", group: p.group || "",
+  status: p.status || (p.attending === false ? "declined" : (p.attending === true ? "joining" : "calling")),
+  days: Array.isArray(p.days) && p.days.length ? p.days : [...DAYS],
+});
+const normBlock = (b) => ({
+  id: b.id || uid(), seatName: b.seatName || b.name || "席",
+  area: b.area || "", day: b.day || "8/2", capacity: clampCap(b.capacity || 6),
+});
+const migrateAssignments = (rawA, nb) => {
+  const na = {};
+  Object.entries(rawA || {}).forEach(([pid, a]) => {
+    if (a && a.blockId !== undefined) {
+      const blk = nb.find((b) => b.id === a.blockId);
+      na[pid] = { [blk ? blk.day : "8/2"]: { blockId: a.blockId, seat: a.seat } };
+    } else if (a && typeof a === "object") { na[pid] = a; }
+  });
+  return na;
+};
+const normalizeData = (d) => {
+  const nb = (d.blocks || []).map(normBlock);
+  return { people: (d.people || []).map(normPerson), blocks: nb, assignments: migrateAssignments(d.assignments || {}, nb) };
+};
+const dataScore = (d) => d ? ((d.people || []).length + (d.blocks || []).length + Object.keys(d.assignments || {}).length) : -1;
+
+function App() {
+  const [tab, setTab] = useState("roster");
+  const [people, setPeople] = useState([]);
+  const [blocks, setBlocks] = useState([]);
+  // assignments: { [personId]: { "8/2": {blockId, seat}, "8/3": {blockId, seat} } }
+  const [assignments, setAssignments] = useState({});
+  const [loaded, setLoaded] = useState(false);
+  const [cfg, setCfg] = useState(null);            // {url, key}
+  const [needSetup, setNeedSetup] = useState(false);
+  const [sync, setSync] = useState("idle");        // synced | saving | offline
+
+  // 設定（SupabaseのURL/キー）を読み込む
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(CFG_KEY);
+      if (raw) { const c = JSON.parse(raw); if (c && c.url && c.key) { setCfg(c); return; } }
+    } catch (e) {}
+    setNeedSetup(true); setLoaded(true);
+  }, []);
+
+  // クラウドからデータを読み込む（失敗時は端末キャッシュにフォールバック）
+  useEffect(() => {
+    if (!cfg) return;
+    (async () => {
+      try {
+        const res = await fetch(cfg.url + "/rest/v1/app_state?id=eq.main&select=data", { headers: sbHeaders(cfg) });
+        if (!res.ok) throw new Error("load " + res.status);
+        const rows = await res.json();
+        if (rows[0] && rows[0].data) {
+          const d = normalizeData(rows[0].data);
+          setPeople(d.people); setBlocks(d.blocks); setAssignments(d.assignments);
+        }
+        setSync("synced");
+      } catch (e) {
+        try { const raw = localStorage.getItem(STORAGE_KEY); if (raw) { const d = normalizeData(JSON.parse(raw)); setPeople(d.people); setBlocks(d.blocks); setAssignments(d.assignments); } } catch (e2) {}
+        setSync("offline");
+      }
+      setLoaded(true);
+    })();
+  }, [cfg]);
+
+  // 変更をクラウドへ保存（端末にもキャッシュ）
+  useEffect(() => {
+    if (!loaded || !cfg) return;
+    const payload = { people, blocks, assignments };
+    const str = JSON.stringify(payload);
+    try { localStorage.setItem(STORAGE_KEY, str); } catch (e) {}
+    setSync("saving");
+    const t = setTimeout(async () => {
+      try {
+        const res = await fetch(cfg.url + "/rest/v1/app_state?on_conflict=id", {
+          method: "POST",
+          headers: { ...sbHeaders(cfg), "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates" },
+          body: JSON.stringify([{ id: "main", data: payload, updated_at: new Date().toISOString() }]),
+        });
+        setSync(res.ok ? "synced" : "offline");
+      } catch (e) { setSync("offline"); }
+    }, 600);
+    return () => clearTimeout(t);
+  }, [people, blocks, assignments, loaded, cfg]);
+
+  const saveCfg = (url, key) => {
+    const c = { url: url.trim().replace(/\/+$/, ""), key: key.trim() };
+    if (!c.url || !c.key) return;
+    try { localStorage.setItem(CFG_KEY, JSON.stringify(c)); } catch (e) {}
+    setNeedSetup(false); setLoaded(false); setCfg(c);
+  };
+
+  const groupColors = useMemo(() => {
+    const map = {};
+    [...new Set(people.map((p) => p.group).filter(Boolean))].forEach((g, i) => (map[g] = GROUP_COLORS[i % GROUP_COLORS.length]));
+    return map;
+  }, [people]);
+
+  const personById = useMemo(() => { const m = {}; people.forEach((p) => (m[p.id] = p)); return m; }, [people]);
+
+  const joiningPeople = useMemo(() => people.filter((p) => p.status === "joining"), [people]);
+
+  const unplacedByDay = useMemo(() => {
+    const res = {};
+    DAYS.forEach((d) => {
+      res[d] = joiningPeople.filter((p) => p.days.includes(d) && !(assignments[p.id] && assignments[p.id][d]));
+    });
+    return res;
+  }, [joiningPeople, assignments]);
+
+  const addPerson = (name, group) => {
+    const t = name.trim(); if (!t) return;
+    setPeople((prev) => [...prev, { id: uid(), name: t, group: group.trim(), status: "calling", days: [...DAYS] }]);
+  };
+  const setStatus = (id, status) => {
+    setPeople((prev) => prev.map((p) => (p.id === id ? { ...p, status } : p)));
+    if (status !== "joining") setAssignments((prev) => { const n = { ...prev }; delete n[id]; return n; });
+  };
+  const toggleDay = (id, day) => {
+    const person = people.find((p) => p.id === id); if (!person) return;
+    const has = person.days.includes(day);
+    const days = DAYS.filter((d) => has ? (person.days.includes(d) && d !== day) : (person.days.includes(d) || d === day));
+    setPeople((prev) => prev.map((p) => (p.id === id ? { ...p, days } : p)));
+    if (has) {
+      setAssignments((prev) => {
+        if (!prev[id] || !prev[id][day]) return prev;
+        const cur = { ...prev[id] }; delete cur[day];
+        const next = { ...prev };
+        if (Object.keys(cur).length) next[id] = cur; else delete next[id];
+        return next;
+      });
+    }
+  };
+  const removePerson = (id) => {
+    setPeople((prev) => prev.filter((p) => p.id !== id));
+    setAssignments((prev) => { const n = { ...prev }; delete n[id]; return n; });
+  };
+  const addBlock = (seatName, area, day, capacity) => {
+    if (!seatName) return;
+    const cap = clampCap(parseInt(capacity, 10) || 1);
+    setBlocks((prev) => [...prev, { id: uid(), seatName, area, day, capacity: cap }]);
+  };
+  const updateCapacity = (block, delta) => {
+    const newCap = clampCap(block.capacity + delta);
+    setBlocks((prev) => prev.map((b) => (b.id === block.id ? { ...b, capacity: newCap } : b)));
+    setAssignments((prev) => {
+      const next = {};
+      Object.entries(prev).forEach(([pid, byDay]) => {
+        const cur = { ...byDay };
+        const a = cur[block.day];
+        if (a && a.blockId === block.id && a.seat >= newCap) delete cur[block.day];
+        if (Object.keys(cur).length) next[pid] = cur;
+      });
+      return next;
+    });
+  };
+  const removeBlock = (block) => {
+    setBlocks((prev) => prev.filter((b) => b.id !== block.id));
+    setAssignments((prev) => {
+      const next = {};
+      Object.entries(prev).forEach(([pid, byDay]) => {
+        const cur = { ...byDay };
+        if (cur[block.day] && cur[block.day].blockId === block.id) delete cur[block.day];
+        if (Object.keys(cur).length) next[pid] = cur;
+      });
+      return next;
+    });
+  };
+  const assign = (pid, blockId, seat, day) =>
+    setAssignments((prev) => ({ ...prev, [pid]: { ...(prev[pid] || {}), [day]: { blockId, seat } } }));
+  const unassign = (pid, day) =>
+    setAssignments((prev) => {
+      const cur = { ...(prev[pid] || {}) }; delete cur[day];
+      const next = { ...prev };
+      if (Object.keys(cur).length) next[pid] = cur; else delete next[pid];
+      return next;
+    });
+  const autoFill = (block) => {
+    const pool = [...unplacedByDay[block.day]];
+    const occupied = new Set();
+    Object.values(assignments).forEach((byDay) => { const a = byDay[block.day]; if (a && a.blockId === block.id) occupied.add(a.seat); });
+    const additions = [];
+    for (let s = 0; s < block.capacity && pool.length; s++) { if (occupied.has(s)) continue; const p = pool.shift(); additions.push([p.id, s]); }
+    setAssignments((prev) => {
+      const next = { ...prev };
+      additions.forEach(([pid, seat]) => { next[pid] = { ...(next[pid] || {}), [block.day]: { blockId: block.id, seat } }; });
+      return next;
+    });
+  };
+  const resetAll = () => {
+    if (!window.confirm("名簿・席割りをすべて削除します。よろしいですか？")) return;
+    setPeople([]); setBlocks([]); setAssignments({});
+    try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
+    try { if (window.storage) window.storage.delete(STORAGE_KEY); } catch (e) {}
+  };
+  const fileRef = useRef(null);
+  const exportData = () => {
+    const payload = JSON.stringify({ people, blocks, assignments }, null, 2);
+    const blob = new Blob([payload], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = "nagaoka-hanabi-backup.json";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+  const importData = (e) => {
+    const file = e.target.files && e.target.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const d = normalizeData(JSON.parse(reader.result));
+        setPeople(d.people); setBlocks(d.blocks); setAssignments(d.assignments);
+      } catch (err) { window.alert("読み込みに失敗しました。ファイル形式をご確認ください。"); }
+    };
+    reader.readAsText(file); e.target.value = "";
+  };
+  const seatMapFor = (block) => {
+    const m = {};
+    Object.entries(assignments).forEach(([pid, byDay]) => { const a = byDay[block.day]; if (a && a.blockId === block.id) m[a.seat] = pid; });
+    return m;
+  };
+
+  if (needSetup) return <SetupScreen onSave={saveCfg} initial={cfg} />;
+
+  return (
+    <div>
+      <header className="nh-header">
+        <div className="nh-spark nh-spark-a" /><div className="nh-spark nh-spark-b" />
+        <p className="nh-eyebrow">長岡まつり大花火大会</p>
+        <h1 className="nh-title">席決め帳</h1>
+        <p className="nh-sub">名簿づくりから、席の割り振り、ご案内の送付まで</p>
+      </header>
+      <nav className="nh-tabs">
+        {[["roster","名簿",people.length],["seating","席割り",blocks.length],["send","送付・確認",""]].map(([key,label,badge]) => (
+          <button key={key} className={"nh-tab" + (tab===key?" active":"")} onClick={() => setTab(key)}>
+            {label}{badge!=="" && <span className="nh-badge">{badge}</span>}
+          </button>
+        ))}
+      </nav>
+      <main className="nh-main">
+        {tab==="roster" ? (
+          <Roster people={people} groupColors={groupColors} onAdd={addPerson} onSetStatus={setStatus} onToggleDay={toggleDay} onRemove={removePerson} />
+        ) : tab==="seating" ? (
+          <Seating blocks={blocks} unplacedByDay={unplacedByDay} joiningPeople={joiningPeople} personById={personById} groupColors={groupColors}
+            seatMapFor={seatMapFor} onAddBlock={addBlock} onCapacity={updateCapacity} onRemoveBlock={removeBlock}
+            onAssign={assign} onUnassign={unassign} onAutoFill={autoFill} />
+        ) : (
+          <Send blocks={blocks} people={people} assignments={assignments} personById={personById} unplacedByDay={unplacedByDay} />
+        )}
+      </main>
+      <footer className="nh-footer">
+        <span className={"nh-sync nh-sync-"+sync}>
+          {sync==="synced" ? "● クラウド同期済み" : sync==="saving" ? "● 保存中…" : sync==="offline" ? "● オフライン（後で同期）" : "● 接続中…"}
+        </span>
+        <span className="nh-footer-actions">
+          <button className="nh-link2" onClick={exportData}>バックアップ書き出し</button>
+          <button className="nh-link2" onClick={()=>fileRef.current && fileRef.current.click()}>読み込み</button>
+          <button className="nh-link2" onClick={()=>setNeedSetup(true)}>接続設定</button>
+          <button className="nh-link" onClick={resetAll}>リセット</button>
+          <input ref={fileRef} type="file" accept="application/json,.json" style={{display:"none"}} onChange={importData} />
+        </span>
+      </footer>
+    </div>
+  );
+}
+
+function Stat({ label, value, tone }) {
+  return <div className={"nh-stat nh-stat-"+tone}><span className="nh-stat-val">{value}</span><span className="nh-stat-label">{label}</span></div>;
+}
+
+function Roster({ people, groupColors, onAdd, onSetStatus, onToggleDay, onRemove }) {
+  const [name, setName] = useState("");
+  const [group, setGroup] = useState("");
+  const count = (s) => people.filter((p) => p.status === s).length;
+  const submit = () => { onAdd(name, group); setName(""); };
+  return (
+    <section>
+      <div className="nh-card nh-addform">
+        <div className="nh-field"><label>お名前</label>
+          <input value={name} placeholder="例）田中 太郎" onChange={(e)=>setName(e.target.value)} onKeyDown={enterGuard(submit)} /></div>
+        <div className="nh-field nh-field-group"><label>グループ（任意）</label>
+          <input value={group} placeholder="例）親族 / 会社 / 友人" onChange={(e)=>setGroup(e.target.value)} onKeyDown={enterGuard(submit)} /></div>
+        <button className="nh-btn-primary" onClick={submit}>＋ 追加</button>
+      </div>
+      <div className="nh-stats">
+        <Stat label="声掛け中" value={count("calling")} tone="call" />
+        <Stat label="参加" value={count("joining")} tone="join" />
+        <Stat label="不参加" value={count("declined")} tone="no" />
+        <Stat label="合計" value={people.length} tone="sum" />
+      </div>
+      {people.length===0 ? (
+        <div className="nh-empty">まだ誰もいません。お声がけする方を追加していきましょう。</div>
+      ) : (
+        <ul className="nh-list">
+          {people.map((p) => (
+            <li key={p.id} className={"nh-person st-"+p.status}>
+              <span className="nh-pname">{p.name}</span>
+              {p.group && <span className="nh-chip" style={{background:(groupColors[p.group]||"#888")+"33", color:groupColors[p.group]||"#ccc", borderColor:(groupColors[p.group]||"#888")+"66"}}>{p.group}</span>}
+              <div className="nh-seg">
+                {STATUS_ORDER.map((s) => (
+                  <button key={s} className={p.status===s ? "on-"+s : ""} onClick={()=>onSetStatus(p.id, s)}>{STATUS[s].label}</button>
+                ))}
+              </div>
+              <button className="nh-del" onClick={()=>onRemove(p.id)} title="削除">×</button>
+              {p.status==="joining" && (
+                <div className="nh-days">
+                  <span className="nh-days-label">参加日</span>
+                  {DAYS.map((d) => (
+                    <button key={d} className={"nh-daychip"+(p.days.includes(d)?" on":"")} onClick={()=>onToggleDay(p.id, d)}>{dayLabel(d)}</button>
+                  ))}
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+function Seating({ blocks, unplacedByDay, joiningPeople, personById, groupColors, seatMapFor, onAddBlock, onCapacity, onRemoveBlock, onAssign, onUnassign, onAutoFill }) {
+  const [bseat, setBseat] = useState("");
+  const [bday, setBday] = useState("8/2");
+  const [bcap, setBcap] = useState("6");
+  const [picker, setPicker] = useState(null);
+  const onSeatChange = (e) => { const v = e.target.value; setBseat(v); const t = seatTypeByLabel(v); if (t) setBcap(String(t.capacity)); };
+  const submit = () => {
+    if (!bseat) return;
+    const t = seatTypeByLabel(bseat);
+    onAddBlock(bseat, t ? t.area : "", bday, bcap);
+    setBseat(""); setBday("8/2"); setBcap("6");
+  };
+  const colorOf = (pid) => { const p = personById[pid]; return p && p.group ? groupColors[p.group] : "#f5c451"; };
+  const dayHasAttendee = (d) => joiningPeople.some((p) => p.days.includes(d));
+  const anyUnplaced = DAYS.some((d) => unplacedByDay[d].length > 0);
+  return (
+    <section>
+      <div className="nh-card nh-addform">
+        <div className="nh-field nh-field-seat"><label>席を選ぶ</label>
+          <select value={bseat} onChange={onSeatChange}>
+            <option value="">— 席を選ぶ —</option>
+            <optgroup label="A会場">
+              {SEAT_TYPES.filter((s)=>s.area==="A").map((s)=><option key={s.label} value={s.label}>{shortSeatName(s.label)}（定員{s.capacity}）</option>)}
+            </optgroup>
+            <optgroup label="B会場">
+              {SEAT_TYPES.filter((s)=>s.area==="B").map((s)=><option key={s.label} value={s.label}>{shortSeatName(s.label)}（定員{s.capacity}）</option>)}
+            </optgroup>
+          </select></div>
+        <div className="nh-field nh-field-day"><label>日時</label>
+          <select value={bday} onChange={(e)=>setBday(e.target.value)}>
+            {DAYS.map((d)=><option key={d} value={d}>{dayLabel(d)}</option>)}
+          </select></div>
+        <div className="nh-field nh-field-cap"><label>席数</label>
+          <input type="number" min="1" max="60" value={bcap} onChange={(e)=>setBcap(e.target.value)} onKeyDown={enterGuard(submit)} /></div>
+        <button className="nh-btn-primary" onClick={submit}>＋ マスを追加</button>
+      </div>
+      <div className={"nh-pool"+(anyUnplaced?" warn":"")}>
+        {DAYS.filter(dayHasAttendee).length===0 ? (
+          <span>「参加」の人を名簿で登録すると、ここに未配置の人が日ごとに表示されます。</span>
+        ) : DAYS.filter(dayHasAttendee).map((d) => {
+          const list = unplacedByDay[d];
+          return (
+            <span key={d} className={list.length ? "day-warn" : "day-ok"}>
+              {dayLabel(d)} 未配置：{list.length===0 ? "なし（全員配置済み）" : <strong>{list.length}名 — {list.map((p)=>p.name).join("、")}</strong>}
+            </span>
+          );
+        })}
+      </div>
+      {blocks.length===0 ? (
+        <div className="nh-empty">「席を選ぶ」と「日時」を選んで席を追加すると、席にタップで人を配置できます。</div>
+      ) : blocks.map((b) => {
+        const map = seatMapFor(b);
+        return (
+          <div className="nh-card nh-block" key={b.id}>
+            <div className="nh-block-head">
+              <div><h3>{b.seatName}</h3><p className="nh-block-info"><span className="nh-block-day">{dayLabel(b.day)}</span>{b.area ? b.area+"会場" : ""}</p></div>
+              <div className="nh-block-tools">
+                <button onClick={()=>onCapacity(b,-1)}>－</button>
+                <span>{b.capacity}席</span>
+                <button onClick={()=>onCapacity(b,1)}>＋</button>
+                <button className="nh-mini" onClick={()=>onAutoFill(b)}>自動で詰める</button>
+                <button className="nh-del" onClick={()=>onRemoveBlock(b)}>×</button>
+              </div>
+            </div>
+            <div className="nh-seats">
+              {Array.from({length:b.capacity}).map((_, i) => {
+                const pid = map[i]; const p = pid ? personById[pid] : null;
+                return (
+                  <button key={i} className={"nh-seat"+(p?" filled":"")}
+                    style={p ? {borderColor:colorOf(pid), background:colorOf(pid)+"22"} : {}}
+                    onClick={()=> p ? onUnassign(pid, b.day) : setPicker({blockId:b.id, seat:i, day:b.day})}>
+                    <span className="nh-seat-num">{i+1}</span>
+                    {p ? <span className="nh-seat-name">{p.name}</span> : <span className="nh-seat-empty">空席</span>}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+      {picker && (
+        <div className="nh-modal-bg" onClick={()=>setPicker(null)}>
+          <div className="nh-modal" onClick={(e)=>e.stopPropagation()}>
+            <h3>誰を配置しますか？ <span className="nh-modal-day">{dayLabel(picker.day)}</span></h3>
+            {unplacedByDay[picker.day].length===0 ? <p className="nh-empty">この日に未配置の参加者がいません。</p> : (
+              <ul className="nh-picklist">
+                {unplacedByDay[picker.day].map((p) => (
+                  <li key={p.id}>
+                    <button onClick={()=>{ onAssign(p.id, picker.blockId, picker.seat, picker.day); setPicker(null); }}>
+                      {p.name}{p.group && <span className="nh-pick-group">{p.group}</span>}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <button className="nh-link" onClick={()=>setPicker(null)}>閉じる</button>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function Send({ blocks, people, assignments, personById, unplacedByDay }) {
+  const [copied, setCopied] = useState("");
+  const [target, setTarget] = useState("");
+  const placedPeople = people.filter((p) => p.status === "joining" && assignments[p.id] && Object.keys(assignments[p.id]).length > 0);
+  const fullText = useMemo(() => {
+    const lines = ["【長岡花火 席割りのご案内】"];
+    DAYS.forEach((d) => {
+      const dayBlocks = blocks.filter((b) => b.day === d);
+      if (!dayBlocks.length) return;
+      lines.push("", "◆ " + dayLabel(d));
+      dayBlocks.forEach((b) => {
+        lines.push("■ " + b.seatName);
+        const map = {};
+        Object.entries(assignments).forEach(([pid, byDay]) => { const a = byDay[d]; if (a && a.blockId === b.id) map[a.seat] = pid; });
+        for (let i = 0; i < b.capacity; i++) { const p = map[i] ? personById[map[i]] : null; lines.push("  " + (i+1) + "番：" + (p ? p.name+" 様" : "（空席）")); }
+      });
+    });
+    return lines.join("\n").trim();
+  }, [blocks, assignments, personById]);
+  const personText = useMemo(() => {
+    if (!target) return "";
+    const p = personById[target]; const byDay = assignments[target];
+    if (!p || !byDay) return "";
+    const lines = [p.name + " 様", "", "長岡花火の席が決まりましたのでご案内します。"];
+    DAYS.forEach((d) => {
+      const a = byDay[d]; if (!a) return;
+      const b = blocks.find((x) => x.id === a.blockId);
+      lines.push("【" + dayLabel(d) + "】" + (b ? b.seatName : "") + " の " + (a.seat+1) + "番");
+    });
+    lines.push("", "当日お会いできるのを楽しみにしています。");
+    return lines.join("\n");
+  }, [target, personById, assignments, blocks]);
+  const copy = async (text, which) => {
+    try { await navigator.clipboard.writeText(text); setCopied(which); setTimeout(()=>setCopied(""),1500); } catch (e) { setCopied("ng"); }
+  };
+  const anyUnplaced = DAYS.some((d) => unplacedByDay[d].length > 0);
+  return (
+    <section>
+      {anyUnplaced && (
+        <div className="nh-pool warn">
+          {DAYS.map((d) => unplacedByDay[d].length ? <span key={d} className="day-warn">⚠ {dayLabel(d)} 未配置 {unplacedByDay[d].length}名：{unplacedByDay[d].map((p)=>p.name).join("、")}</span> : null)}
+        </div>
+      )}
+      <div className="nh-card">
+        <div className="nh-send-head"><h3>全体の席割り</h3>
+          <button className="nh-btn-primary" onClick={()=>copy(fullText,"full")}>{copied==="full"?"コピーしました ✓":"コピー"}</button></div>
+        <pre className="nh-pre">{fullText || "まだ席割りがありません。"}</pre>
+      </div>
+      <div className="nh-card">
+        <div className="nh-send-head"><h3>個人宛の案内文</h3></div>
+        <div className="nh-field"><label>送る相手を選ぶ</label>
+          <select value={target} onChange={(e)=>setTarget(e.target.value)}>
+            <option value="">— 選択してください —</option>
+            {placedPeople.map((p)=><option key={p.id} value={p.id}>{p.name}</option>)}
+          </select></div>
+        {personText && (<>
+          <pre className="nh-pre">{personText}</pre>
+          <button className="nh-btn-primary" onClick={()=>copy(personText,"person")}>{copied==="person"?"コピーしました ✓":"この案内文をコピー"}</button>
+        </>)}
+      </div>
+    </section>
+  );
+}
+
+function SetupScreen({ onSave, initial }) {
+  const [url, setUrl] = useState(initial ? initial.url : "");
+  const [key, setKey] = useState(initial ? initial.key : "");
+  return (
+    <div className="nh-setup">
+      <h1 className="nh-title" style={{fontSize:"30px"}}>はじめの接続設定</h1>
+      <p className="nh-setup-lead">データを失わないよう、無料のクラウド保存（Supabase）に接続します。下の2つを貼り付けて保存すると、以降このページを開くだけで記録が残ります。</p>
+      <ol className="nh-setup-steps">
+        <li>Supabaseでプロジェクトを作成（無料）</li>
+        <li>「Project Settings → API」を開く</li>
+        <li>「Project URL」と「anon public」キーを下に貼り付け</li>
+      </ol>
+      <div className="nh-field" style={{marginBottom:"12px"}}>
+        <label>Project URL（https://◯◯◯.supabase.co）</label>
+        <input value={url} placeholder="https://xxxxxxxx.supabase.co" onChange={(e)=>setUrl(e.target.value)} />
+      </div>
+      <div className="nh-field" style={{marginBottom:"16px"}}>
+        <label>anon public キー</label>
+        <input value={key} placeholder="eyJhbGciOi..." onChange={(e)=>setKey(e.target.value)} />
+      </div>
+      <button className="nh-btn-primary" style={{width:"100%"}} onClick={()=>onSave(url, key)} disabled={!url.trim()||!key.trim()}>接続して保存</button>
+      <p className="nh-setup-note">※ うまくいかない時は、テーブル作成のSQLを実行したかご確認ください（案内文を参照）。</p>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
