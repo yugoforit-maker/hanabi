@@ -155,6 +155,12 @@
   .nh-feerow-controls{display:flex; align-items:center; gap:6px; margin-left:auto; flex-wrap:wrap; justify-content:flex-end;}
   .nh-feerow-controls .nh-fee{margin-left:0; width:82px;}
   .nh-colsel{background:#0c1130; border:1px solid var(--line); color:var(--ink); border-radius:8px; padding:7px 8px; font-size:12.5px; font-family:inherit;}
+  .nh-feeperson{background:var(--panel); border:1px solid var(--line); border-left:3px solid var(--go); border-radius:12px; padding:10px 12px;}
+  .nh-feeperson-head{display:flex; align-items:center; gap:10px; margin-bottom:6px;}
+  .nh-feeday{display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-top:7px; padding-top:7px; border-top:1px dashed var(--line);}
+  .nh-feeday:first-of-type{border-top:none; padding-top:0;}
+  .nh-feeday-tag{font-size:11.5px; color:var(--gold-soft); background:#0c1130; border:1px solid var(--line); border-radius:7px; padding:3px 9px; min-width:54px; text-align:center;}
+  .nh-feeday .nh-fee{margin-left:0; width:80px;}
 </style>
 </head>
 <body>
@@ -239,15 +245,33 @@ const migrateAssignments = (rawA, nb) => {
   return na;
 };
 const normExpense = (e) => ({ id: e.id || uid(), payee: e.payee || e.name || "", amount: Number(e.amount) || 0, paid: !!e.paid });
-const normFees = (f) => { const o = {}; Object.entries(f || {}).forEach(([k, v]) => { o[k] = { amount: Number(v && v.amount) || 0, paid: !!(v && v.paid), collector: (v && v.collector) || "" }; }); return o; };
+const normFeeUnit = (v) => ({ amount: Number(v && v.amount) || 0, paid: !!(v && v.paid), collector: (v && v.collector) || "" });
+const normFees = (f, people) => {
+  const byId = {}; (people || []).forEach((p) => (byId[p.id] = p));
+  const out = {};
+  Object.entries(f || {}).forEach(([pid, v]) => {
+    if (!v || typeof v !== "object") return;
+    if (v["8/2"] || v["8/3"]) {
+      const days = {};
+      DAYS.forEach((d) => { if (v[d]) days[d] = normFeeUnit(v[d]); });
+      out[pid] = days;
+    } else {
+      const p = byId[pid];
+      const first = (p && DAYS.filter((dd) => p.days.includes(dd))[0]) || "8/2";
+      out[pid] = { [first]: normFeeUnit(v) };
+    }
+  });
+  return out;
+};
 const normalizeData = (d) => {
   const nb = (d.blocks || []).map(normBlock);
+  const np = (d.people || []).map(normPerson);
   return {
-    people: (d.people || []).map(normPerson),
+    people: np,
     blocks: nb,
     assignments: migrateAssignments(d.assignments || {}, nb),
     expenses: (d.expenses || []).map(normExpense),
-    fees: normFees(d.fees || {}),
+    fees: normFees(d.fees || {}, np),
     collectors: Array.isArray(d.collectors) && d.collectors.length ? d.collectors : ["私"],
   };
 };
@@ -428,14 +452,33 @@ function App() {
   };
   const removeExpense = (id) => setExpenses((prev) => prev.filter((e) => e.id !== id));
   const togglePaidExpense = (id) => setExpenses((prev) => prev.map((e) => e.id === id ? { ...e, paid: !e.paid } : e));
-  const setFee = (pid, amount) => setFees((prev) => ({ ...prev, [pid]: { amount: Number(amount) || 0, paid: (prev[pid] && prev[pid].paid) || false, collector: (prev[pid] && prev[pid].collector) || "" } }));
-  const toggleFeePaid = (pid) => setFees((prev) => ({ ...prev, [pid]: { amount: (prev[pid] && prev[pid].amount) || 0, paid: !(prev[pid] && prev[pid].paid), collector: (prev[pid] && prev[pid].collector) || "" } }));
-  const setFeeCollector = (pid, collector) => setFees((prev) => ({ ...prev, [pid]: { amount: (prev[pid] && prev[pid].amount) || 0, paid: (prev[pid] && prev[pid].paid) || false, collector } }));
+  const setFee = (pid, day, amount) => setFees((prev) => {
+    const person = { ...(prev[pid] || {}) };
+    const cur = person[day] || { amount: 0, paid: false, collector: "" };
+    person[day] = { ...cur, amount: Number(amount) || 0 };
+    return { ...prev, [pid]: person };
+  });
+  const toggleFeePaid = (pid, day) => setFees((prev) => {
+    const person = { ...(prev[pid] || {}) };
+    const cur = person[day] || { amount: 0, paid: false, collector: "" };
+    person[day] = { ...cur, paid: !cur.paid };
+    return { ...prev, [pid]: person };
+  });
+  const setFeeCollector = (pid, day, collector) => setFees((prev) => {
+    const person = { ...(prev[pid] || {}) };
+    const cur = person[day] || { amount: 0, paid: false, collector: "" };
+    person[day] = { ...cur, collector };
+    return { ...prev, [pid]: person };
+  });
   const setAllFees = (amount) => {
     const amt = Number(amount) || 0;
     setFees((prev) => {
       const next = { ...prev };
-      people.filter((p) => p.status === "joining").forEach((p) => { next[p.id] = { amount: amt, paid: (prev[p.id] && prev[p.id].paid) || false, collector: (prev[p.id] && prev[p.id].collector) || "" }; });
+      people.filter((p) => p.status === "joining").forEach((p) => {
+        const person = { ...(next[p.id] || {}) };
+        p.days.forEach((d) => { const cur = person[d] || { amount: 0, paid: false, collector: "" }; person[d] = { ...cur, amount: amt }; });
+        next[p.id] = person;
+      });
       return next;
     });
   };
@@ -750,16 +793,18 @@ function Money({ people, expenses, fees, collectors, groupColors, onAddExpense, 
   const [bulk, setBulk] = useState("");
   const [newCol, setNewCol] = useState("");
   const joining = people.filter((p) => p.status === "joining");
+  const daysOf = (p) => DAYS.filter((d) => p.days.includes(d));
 
   const procTotal = expenses.reduce((s, e) => s + (Number(e.amount) || 0), 0);
   const procPaid = expenses.reduce((s, e) => s + (e.paid ? (Number(e.amount) || 0) : 0), 0);
   const procUnpaid = procTotal - procPaid;
 
-  const feeOf = (id) => (fees[id] && Number(fees[id].amount)) || 0;
-  const paidOf = (id) => !!(fees[id] && fees[id].paid);
-  const colOf = (id) => (fees[id] && fees[id].collector) || "";
-  const planned = joining.reduce((s, p) => s + feeOf(p.id), 0);
-  const received = joining.reduce((s, p) => s + (paidOf(p.id) ? feeOf(p.id) : 0), 0);
+  const feeOf = (id, d) => (fees[id] && fees[id][d] && Number(fees[id][d].amount)) || 0;
+  const paidOf = (id, d) => !!(fees[id] && fees[id][d] && fees[id][d].paid);
+  const colOf = (id, d) => (fees[id] && fees[id][d] && fees[id][d].collector) || "";
+
+  let planned = 0, received = 0;
+  joining.forEach((p) => daysOf(p).forEach((d) => { const a = feeOf(p.id, d); planned += a; if (paidOf(p.id, d)) received += a; }));
   const outstanding = planned - received;
   const shortage = procTotal - received;
   const diff = planned - procTotal;
@@ -772,11 +817,11 @@ function Money({ people, expenses, fees, collectors, groupColors, onAddExpense, 
     if (!e.paid) byPayee[k].unpaid += Number(e.amount) || 0;
   });
   const byCollector = {};
-  joining.forEach((p) => {
-    if (!paidOf(p.id)) return;
-    const k = colOf(p.id) || "（未設定）";
-    byCollector[k] = (byCollector[k] || 0) + feeOf(p.id);
-  });
+  joining.forEach((p) => daysOf(p).forEach((d) => {
+    if (!paidOf(p.id, d)) return;
+    const k = colOf(p.id, d) || "（未設定）";
+    byCollector[k] = (byCollector[k] || 0) + feeOf(p.id, d);
+  }));
 
   const submitExpense = () => { onAddExpense(payee, eamt); setPayee(""); setEamt(""); };
   const submitCollector = () => { onAddCollector(newCol); setNewCol(""); };
@@ -850,25 +895,35 @@ function Money({ people, expenses, fees, collectors, groupColors, onAddExpense, 
         {joining.length===0 ? <p className="nh-empty">「参加」の人がいません。名簿で登録してください。</p> : (<>
           <div className="nh-bulk">
             <span>全員へ一括</span>
-            <input type="number" inputMode="numeric" value={bulk} placeholder="金額" onChange={(e)=>setBulk(e.target.value)} />
+            <input type="number" inputMode="numeric" value={bulk} placeholder="1日あたり金額" onChange={(e)=>setBulk(e.target.value)} />
             <button className="nh-link2" onClick={()=>onSetAllFees(bulk)}>反映</button>
           </div>
+          <p className="nh-money-note" style={{marginTop:"0", marginBottom:"12px"}}>※両日参加の方は各日にこの金額が入り、合計は2日分になります。</p>
           <ul className="nh-list">
-            {joining.map((p) => (
-              <li key={p.id} className={"nh-person nh-feerow"+(paidOf(p.id)?" st-joining":"")}>
-                <span className="nh-pname">{p.name}</span>
-                {p.group && <span className="nh-chip" style={{background:(groupColors[p.group]||"#888")+"33", color:groupColors[p.group]||"#ccc", borderColor:(groupColors[p.group]||"#888")+"66"}}>{p.group}</span>}
-                <div className="nh-feerow-controls">
-                  <input className="nh-fee" type="number" inputMode="numeric" value={feeOf(p.id)||""} placeholder="0" onChange={(e)=>onSetFee(p.id, e.target.value)} />
-                  <span className="nh-yen-unit">円</span>
-                  <select className="nh-colsel" value={colOf(p.id)} onChange={(e)=>onSetFeeCollector(p.id, e.target.value)}>
-                    <option value="">集金者</option>
-                    {collectors.map((c) => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                  <button className={"nh-paid"+(paidOf(p.id)?" on":"")} onClick={()=>onToggleFeePaid(p.id)}>{paidOf(p.id)?"受取済み":"未払い"}</button>
-                </div>
-              </li>
-            ))}
+            {joining.map((p) => {
+              const ds = daysOf(p);
+              const multi = ds.length > 1;
+              return (
+                <li key={p.id} className="nh-feeperson">
+                  <div className="nh-feeperson-head">
+                    <span className="nh-pname">{p.name}</span>
+                    {p.group && <span className="nh-chip" style={{background:(groupColors[p.group]||"#888")+"33", color:groupColors[p.group]||"#ccc", borderColor:(groupColors[p.group]||"#888")+"66"}}>{p.group}</span>}
+                  </div>
+                  {ds.map((d) => (
+                    <div key={d} className={"nh-feeday"+(paidOf(p.id,d)?" paid":"")}>
+                      {multi && <span className="nh-feeday-tag">{dayLabel(d)}</span>}
+                      <input className="nh-fee" type="number" inputMode="numeric" value={feeOf(p.id,d)||""} placeholder="0" onChange={(e)=>onSetFee(p.id, d, e.target.value)} />
+                      <span className="nh-yen-unit">円</span>
+                      <select className="nh-colsel" value={colOf(p.id,d)} onChange={(e)=>onSetFeeCollector(p.id, d, e.target.value)}>
+                        <option value="">集金者</option>
+                        {collectors.map((c) => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                      <button className={"nh-paid"+(paidOf(p.id,d)?" on":"")} onClick={()=>onToggleFeePaid(p.id, d)}>{paidOf(p.id,d)?"受取済み":"未払い"}</button>
+                    </div>
+                  ))}
+                </li>
+              );
+            })}
           </ul>
           {Object.keys(byCollector).length>0 && (
             <div className="nh-break">
