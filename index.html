@@ -121,6 +121,40 @@
   .nh-setup-lead{font-size:14px; line-height:1.7; color:var(--ink); margin:0 0 16px;}
   .nh-setup-steps{font-size:13.5px; line-height:1.8; color:var(--muted); background:#0c1130; border:1px solid var(--line); border-radius:12px; padding:14px 14px 14px 32px; margin:0 0 18px;}
   .nh-setup-note{font-size:11.5px; color:var(--muted); margin-top:12px; line-height:1.6;}
+  .nh-msum{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px;}
+  .nh-mrow{display:flex; justify-content:space-between; align-items:baseline; gap:8px; background:#0c1130; border:1px solid var(--line); border-radius:10px; padding:9px 12px;}
+  .nh-mrow span{font-size:12px; color:var(--muted);}
+  .nh-mrow strong{font-size:15px; font-family:'Shippori Mincho',serif;}
+  .nh-mrow.ok strong{color:var(--go);}
+  .nh-mrow.warn strong{color:var(--no);}
+  .nh-balance{display:flex; justify-content:space-between; align-items:center; gap:8px; border-radius:12px; padding:12px 14px; border:1px solid var(--line);}
+  .nh-balance span{font-size:12px; color:var(--muted);}
+  .nh-balance strong{font-size:20px; font-family:'Shippori Mincho',serif; white-space:nowrap;}
+  .nh-balance.plus{background:rgba(143,214,148,.12); border-color:var(--go);}
+  .nh-balance.plus strong{color:var(--go);}
+  .nh-balance.minus{background:rgba(255,122,107,.12); border-color:var(--no);}
+  .nh-balance.minus strong{color:var(--no);}
+  .nh-money-amt{margin-left:auto; font-size:14.5px; font-weight:600; font-family:'Shippori Mincho',serif;}
+  .nh-bulk{display:flex; align-items:center; gap:8px; margin-bottom:12px; font-size:12.5px; color:var(--muted);}
+  .nh-bulk input{width:110px; background:#0c1130; border:1px solid var(--line); color:var(--ink); border-radius:8px; padding:8px 10px; font-size:14px; font-family:inherit;}
+  .nh-fee{margin-left:auto; width:96px; text-align:right; background:#0c1130; border:1px solid var(--line); color:var(--ink); border-radius:8px; padding:8px 10px; font-size:14.5px; font-family:inherit;}
+  .nh-yen-unit{font-size:12px; color:var(--muted);}
+  .nh-paid{border:1px solid var(--line); background:#0c1130; color:var(--muted); border-radius:8px; padding:7px 11px; font-size:12px; cursor:pointer; font-family:inherit; white-space:nowrap;}
+  .nh-paid.on{background:var(--go); color:#06210f; border-color:var(--go); font-weight:700;}
+  .nh-money-note{font-size:12px; color:var(--muted); margin:10px 0 0; line-height:1.6;}
+  .nh-break{margin-top:12px; background:#0c1130; border:1px solid var(--line); border-radius:10px; padding:10px 12px;}
+  .nh-break-title{font-size:11.5px; color:var(--gold-soft); display:block; margin-bottom:6px;}
+  .nh-break-row{display:flex; justify-content:space-between; font-size:13px; padding:3px 0; gap:10px;}
+  .nh-unpaid{color:var(--no); font-weight:400; font-size:12px; margin-left:6px;}
+  .nh-collectors{margin-bottom:14px;}
+  .nh-col-chips{display:flex; flex-wrap:wrap; gap:6px; margin:6px 0 8px;}
+  .nh-col-chip{display:inline-flex; align-items:center; gap:4px; background:#0c1130; border:1px solid var(--line); border-radius:20px; padding:4px 6px 4px 11px; font-size:12.5px;}
+  .nh-col-chip button{border:none; background:transparent; color:var(--no); cursor:pointer; font-size:14px; line-height:1; padding:0;}
+  .nh-col-add{display:flex; align-items:center; gap:8px;}
+  .nh-col-add input{flex:1; background:#0c1130; border:1px solid var(--line); color:var(--ink); border-radius:8px; padding:8px 10px; font-size:14px; font-family:inherit;}
+  .nh-feerow-controls{display:flex; align-items:center; gap:6px; margin-left:auto; flex-wrap:wrap; justify-content:flex-end;}
+  .nh-feerow-controls .nh-fee{margin-left:0; width:82px;}
+  .nh-colsel{background:#0c1130; border:1px solid var(--line); color:var(--ink); border-radius:8px; padding:7px 8px; font-size:12.5px; font-family:inherit;}
 </style>
 </head>
 <body>
@@ -182,6 +216,7 @@ const dayLabel = (d) => d + "(" + (WEEKDAY[d] || "") + ")";
 
 const uid = () => (crypto?.randomUUID?.() || String(Date.now()) + Math.random().toString(16).slice(2));
 const clampCap = (n) => Math.max(1, Math.min(60, n));
+const yen = (n) => "¥" + (Number(n) || 0).toLocaleString("ja-JP");
 const enterGuard = (fn) => (e) => { if (e.key === "Enter" && !e.nativeEvent.isComposing) fn(); };
 
 const normPerson = (p) => ({
@@ -203,9 +238,18 @@ const migrateAssignments = (rawA, nb) => {
   });
   return na;
 };
+const normExpense = (e) => ({ id: e.id || uid(), payee: e.payee || e.name || "", amount: Number(e.amount) || 0, paid: !!e.paid });
+const normFees = (f) => { const o = {}; Object.entries(f || {}).forEach(([k, v]) => { o[k] = { amount: Number(v && v.amount) || 0, paid: !!(v && v.paid), collector: (v && v.collector) || "" }; }); return o; };
 const normalizeData = (d) => {
   const nb = (d.blocks || []).map(normBlock);
-  return { people: (d.people || []).map(normPerson), blocks: nb, assignments: migrateAssignments(d.assignments || {}, nb) };
+  return {
+    people: (d.people || []).map(normPerson),
+    blocks: nb,
+    assignments: migrateAssignments(d.assignments || {}, nb),
+    expenses: (d.expenses || []).map(normExpense),
+    fees: normFees(d.fees || {}),
+    collectors: Array.isArray(d.collectors) && d.collectors.length ? d.collectors : ["私"],
+  };
 };
 const dataScore = (d) => d ? ((d.people || []).length + (d.blocks || []).length + Object.keys(d.assignments || {}).length) : -1;
 
@@ -215,6 +259,9 @@ function App() {
   const [blocks, setBlocks] = useState([]);
   // assignments: { [personId]: { "8/2": {blockId, seat}, "8/3": {blockId, seat} } }
   const [assignments, setAssignments] = useState({});
+  const [expenses, setExpenses] = useState([]);
+  const [fees, setFees] = useState({});
+  const [collectors, setCollectors] = useState(["私"]);
   const [loaded, setLoaded] = useState(false);
   const [cfg, setCfg] = useState(null);            // {url, key}
   const [needSetup, setNeedSetup] = useState(false);
@@ -239,11 +286,11 @@ function App() {
         const rows = await res.json();
         if (rows[0] && rows[0].data) {
           const d = normalizeData(rows[0].data);
-          setPeople(d.people); setBlocks(d.blocks); setAssignments(d.assignments);
+          setPeople(d.people); setBlocks(d.blocks); setAssignments(d.assignments); setExpenses(d.expenses); setFees(d.fees); setCollectors(d.collectors);
         }
         setSync("synced");
       } catch (e) {
-        try { const raw = localStorage.getItem(STORAGE_KEY); if (raw) { const d = normalizeData(JSON.parse(raw)); setPeople(d.people); setBlocks(d.blocks); setAssignments(d.assignments); } } catch (e2) {}
+        try { const raw = localStorage.getItem(STORAGE_KEY); if (raw) { const d = normalizeData(JSON.parse(raw)); setPeople(d.people); setBlocks(d.blocks); setAssignments(d.assignments); setExpenses(d.expenses); setFees(d.fees); setCollectors(d.collectors); } } catch (e2) {}
         setSync("offline");
       }
       setLoaded(true);
@@ -253,7 +300,7 @@ function App() {
   // 変更をクラウドへ保存（端末にもキャッシュ）
   useEffect(() => {
     if (!loaded || !cfg) return;
-    const payload = { people, blocks, assignments };
+    const payload = { people, blocks, assignments, expenses, fees, collectors };
     const str = JSON.stringify(payload);
     try { localStorage.setItem(STORAGE_KEY, str); } catch (e) {}
     setSync("saving");
@@ -374,15 +421,35 @@ function App() {
       return next;
     });
   };
+  const addExpense = (payee, amount) => {
+    const nm = (payee || "").trim(); const amt = Number(amount) || 0;
+    if (!nm && !amt) return;
+    setExpenses((prev) => [...prev, { id: uid(), payee: nm || "支払い先", amount: amt, paid: false }]);
+  };
+  const removeExpense = (id) => setExpenses((prev) => prev.filter((e) => e.id !== id));
+  const togglePaidExpense = (id) => setExpenses((prev) => prev.map((e) => e.id === id ? { ...e, paid: !e.paid } : e));
+  const setFee = (pid, amount) => setFees((prev) => ({ ...prev, [pid]: { amount: Number(amount) || 0, paid: (prev[pid] && prev[pid].paid) || false, collector: (prev[pid] && prev[pid].collector) || "" } }));
+  const toggleFeePaid = (pid) => setFees((prev) => ({ ...prev, [pid]: { amount: (prev[pid] && prev[pid].amount) || 0, paid: !(prev[pid] && prev[pid].paid), collector: (prev[pid] && prev[pid].collector) || "" } }));
+  const setFeeCollector = (pid, collector) => setFees((prev) => ({ ...prev, [pid]: { amount: (prev[pid] && prev[pid].amount) || 0, paid: (prev[pid] && prev[pid].paid) || false, collector } }));
+  const setAllFees = (amount) => {
+    const amt = Number(amount) || 0;
+    setFees((prev) => {
+      const next = { ...prev };
+      people.filter((p) => p.status === "joining").forEach((p) => { next[p.id] = { amount: amt, paid: (prev[p.id] && prev[p.id].paid) || false, collector: (prev[p.id] && prev[p.id].collector) || "" }; });
+      return next;
+    });
+  };
+  const addCollector = (name) => { const n = (name || "").trim(); if (!n) return; setCollectors((prev) => prev.includes(n) ? prev : [...prev, n]); };
+  const removeCollector = (name) => setCollectors((prev) => prev.filter((c) => c !== name));
   const resetAll = () => {
     if (!window.confirm("名簿・席割りをすべて削除します。よろしいですか？")) return;
-    setPeople([]); setBlocks([]); setAssignments({});
+    setPeople([]); setBlocks([]); setAssignments({}); setExpenses([]); setFees({}); setCollectors(["私"]);
     try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
     try { if (window.storage) window.storage.delete(STORAGE_KEY); } catch (e) {}
   };
   const fileRef = useRef(null);
   const exportData = () => {
-    const payload = JSON.stringify({ people, blocks, assignments }, null, 2);
+    const payload = JSON.stringify({ people, blocks, assignments, expenses, fees, collectors }, null, 2);
     const blob = new Blob([payload], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -396,7 +463,7 @@ function App() {
     reader.onload = () => {
       try {
         const d = normalizeData(JSON.parse(reader.result));
-        setPeople(d.people); setBlocks(d.blocks); setAssignments(d.assignments);
+        setPeople(d.people); setBlocks(d.blocks); setAssignments(d.assignments); setExpenses(d.expenses); setFees(d.fees); setCollectors(d.collectors);
       } catch (err) { window.alert("読み込みに失敗しました。ファイル形式をご確認ください。"); }
     };
     reader.readAsText(file); e.target.value = "";
@@ -418,7 +485,7 @@ function App() {
         <p className="nh-sub">名簿づくりから、席の割り振り、ご案内の送付まで</p>
       </header>
       <nav className="nh-tabs">
-        {[["roster","名簿",people.length],["seating","席割り",blocks.length],["send","送付・確認",""]].map(([key,label,badge]) => (
+        {[["roster","名簿",people.length],["seating","席割り",blocks.length],["money","収支",""],["send","送付",""]].map(([key,label,badge]) => (
           <button key={key} className={"nh-tab" + (tab===key?" active":"")} onClick={() => setTab(key)}>
             {label}{badge!=="" && <span className="nh-badge">{badge}</span>}
           </button>
@@ -431,6 +498,11 @@ function App() {
           <Seating blocks={blocks} unplacedByDay={unplacedByDay} joiningPeople={joiningPeople} personById={personById} groupColors={groupColors}
             seatMapFor={seatMapFor} onAddBlock={addBlock} onCapacity={updateCapacity} onRemoveBlock={removeBlock}
             onAssign={assign} onUnassign={unassign} onAutoFill={autoFill} />
+        ) : tab==="money" ? (
+          <Money people={people} expenses={expenses} fees={fees} collectors={collectors} groupColors={groupColors}
+            onAddExpense={addExpense} onRemoveExpense={removeExpense} onTogglePaidExpense={togglePaidExpense}
+            onSetFee={setFee} onToggleFeePaid={toggleFeePaid} onSetFeeCollector={setFeeCollector} onSetAllFees={setAllFees}
+            onAddCollector={addCollector} onRemoveCollector={removeCollector} />
         ) : (
           <Send blocks={blocks} people={people} assignments={assignments} personById={personById} unplacedByDay={unplacedByDay} />
         )}
@@ -666,6 +738,146 @@ function Send({ blocks, people, assignments, personById, unplacedByDay }) {
         {personText && (<>
           <pre className="nh-pre">{personText}</pre>
           <button className="nh-btn-primary" onClick={()=>copy(personText,"person")}>{copied==="person"?"コピーしました ✓":"この案内文をコピー"}</button>
+        </>)}
+      </div>
+    </section>
+  );
+}
+
+function Money({ people, expenses, fees, collectors, groupColors, onAddExpense, onRemoveExpense, onTogglePaidExpense, onSetFee, onToggleFeePaid, onSetFeeCollector, onSetAllFees, onAddCollector, onRemoveCollector }) {
+  const [payee, setPayee] = useState("");
+  const [eamt, setEamt] = useState("");
+  const [bulk, setBulk] = useState("");
+  const [newCol, setNewCol] = useState("");
+  const joining = people.filter((p) => p.status === "joining");
+
+  const procTotal = expenses.reduce((s, e) => s + (Number(e.amount) || 0), 0);
+  const procPaid = expenses.reduce((s, e) => s + (e.paid ? (Number(e.amount) || 0) : 0), 0);
+  const procUnpaid = procTotal - procPaid;
+
+  const feeOf = (id) => (fees[id] && Number(fees[id].amount)) || 0;
+  const paidOf = (id) => !!(fees[id] && fees[id].paid);
+  const colOf = (id) => (fees[id] && fees[id].collector) || "";
+  const planned = joining.reduce((s, p) => s + feeOf(p.id), 0);
+  const received = joining.reduce((s, p) => s + (paidOf(p.id) ? feeOf(p.id) : 0), 0);
+  const outstanding = planned - received;
+  const shortage = procTotal - received;
+  const diff = planned - procTotal;
+
+  const byPayee = {};
+  expenses.forEach((e) => {
+    const k = e.payee || "（未設定）";
+    if (!byPayee[k]) byPayee[k] = { total: 0, unpaid: 0 };
+    byPayee[k].total += Number(e.amount) || 0;
+    if (!e.paid) byPayee[k].unpaid += Number(e.amount) || 0;
+  });
+  const byCollector = {};
+  joining.forEach((p) => {
+    if (!paidOf(p.id)) return;
+    const k = colOf(p.id) || "（未設定）";
+    byCollector[k] = (byCollector[k] || 0) + feeOf(p.id);
+  });
+
+  const submitExpense = () => { onAddExpense(payee, eamt); setPayee(""); setEamt(""); };
+  const submitCollector = () => { onAddCollector(newCol); setNewCol(""); };
+
+  return (
+    <section>
+      <div className="nh-card">
+        <div className="nh-msum">
+          <div className="nh-mrow"><span>仕入れ総額</span><strong>{yen(procTotal)}</strong></div>
+          <div className="nh-mrow ok"><span>立替済み</span><strong>{yen(procPaid)}</strong></div>
+          <div className="nh-mrow warn"><span>未払い仕入れ</span><strong>{yen(procUnpaid)}</strong></div>
+          <div className="nh-mrow"><span>集金予定</span><strong>{yen(planned)}</strong></div>
+          <div className="nh-mrow ok"><span>受取済み</span><strong>{yen(received)}</strong></div>
+          <div className="nh-mrow warn"><span>未回収</span><strong>{yen(outstanding)}</strong></div>
+        </div>
+        <div className={"nh-balance " + (shortage > 0 ? "minus" : "plus")}>
+          <span>あと必要（仕入れ総額 − 受取済み）</span>
+          <strong>{shortage > 0 ? yen(shortage) : "充足"}</strong>
+        </div>
+        <p className="nh-money-note">{diff >= 0 ? "集金予定で仕入れをまかなえます（＋" + yen(diff) + "）。" : "集金予定では仕入れに不足します（不足 " + yen(-diff) + "）。"}</p>
+      </div>
+
+      <div className="nh-card">
+        <div className="nh-send-head"><h3>仕入れ（枡席の支払い）</h3></div>
+        <div className="nh-addform">
+          <div className="nh-field"><label>支払い先</label>
+            <input value={payee} placeholder="例）○○商店 / Aさん" onChange={(e)=>setPayee(e.target.value)} onKeyDown={enterGuard(submitExpense)} /></div>
+          <div className="nh-field" style={{flex:"0 0 120px", minWidth:"110px"}}><label>金額(円)</label>
+            <input type="number" inputMode="numeric" value={eamt} placeholder="30000" onChange={(e)=>setEamt(e.target.value)} onKeyDown={enterGuard(submitExpense)} /></div>
+          <button className="nh-btn-primary" onClick={submitExpense}>＋ 追加</button>
+        </div>
+        {expenses.length===0 ? <p className="nh-empty">まだ仕入れがありません。</p> : (
+          <ul className="nh-list" style={{marginTop:"12px"}}>
+            {expenses.map((e) => (
+              <li key={e.id} className={"nh-person"+(e.paid?" st-joining":"")}>
+                <span className="nh-pname">{e.payee}</span>
+                <span className="nh-money-amt">{yen(e.amount)}</span>
+                <button className={"nh-paid"+(e.paid?" on":"")} onClick={()=>onTogglePaidExpense(e.id)}>{e.paid?"支払済み":"未払い"}</button>
+                <button className="nh-del" onClick={()=>onRemoveExpense(e.id)}>×</button>
+              </li>
+            ))}
+          </ul>
+        )}
+        {Object.keys(byPayee).length>0 && (
+          <div className="nh-break">
+            <div className="nh-break-title">支払い先ごと</div>
+            {Object.entries(byPayee).map(([k,v]) => (
+              <div key={k} className="nh-break-row">
+                <span>{k}</span>
+                <span>{yen(v.total)}{v.unpaid>0 && <b className="nh-unpaid">未払い {yen(v.unpaid)}</b>}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="nh-card">
+        <div className="nh-send-head"><h3>集金（参加者から）</h3></div>
+        <div className="nh-collectors">
+          <span className="nh-break-title">集金者（受け取る人）</span>
+          <div className="nh-col-chips">
+            {collectors.map((c) => (
+              <span key={c} className="nh-col-chip">{c}<button onClick={()=>onRemoveCollector(c)}>×</button></span>
+            ))}
+          </div>
+          <div className="nh-col-add">
+            <input value={newCol} placeholder="集金者を追加（例：私 / Bさん）" onChange={(e)=>setNewCol(e.target.value)} onKeyDown={enterGuard(submitCollector)} />
+            <button className="nh-link2" onClick={submitCollector}>追加</button>
+          </div>
+        </div>
+        {joining.length===0 ? <p className="nh-empty">「参加」の人がいません。名簿で登録してください。</p> : (<>
+          <div className="nh-bulk">
+            <span>全員へ一括</span>
+            <input type="number" inputMode="numeric" value={bulk} placeholder="金額" onChange={(e)=>setBulk(e.target.value)} />
+            <button className="nh-link2" onClick={()=>onSetAllFees(bulk)}>反映</button>
+          </div>
+          <ul className="nh-list">
+            {joining.map((p) => (
+              <li key={p.id} className={"nh-person nh-feerow"+(paidOf(p.id)?" st-joining":"")}>
+                <span className="nh-pname">{p.name}</span>
+                {p.group && <span className="nh-chip" style={{background:(groupColors[p.group]||"#888")+"33", color:groupColors[p.group]||"#ccc", borderColor:(groupColors[p.group]||"#888")+"66"}}>{p.group}</span>}
+                <div className="nh-feerow-controls">
+                  <input className="nh-fee" type="number" inputMode="numeric" value={feeOf(p.id)||""} placeholder="0" onChange={(e)=>onSetFee(p.id, e.target.value)} />
+                  <span className="nh-yen-unit">円</span>
+                  <select className="nh-colsel" value={colOf(p.id)} onChange={(e)=>onSetFeeCollector(p.id, e.target.value)}>
+                    <option value="">集金者</option>
+                    {collectors.map((c) => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                  <button className={"nh-paid"+(paidOf(p.id)?" on":"")} onClick={()=>onToggleFeePaid(p.id)}>{paidOf(p.id)?"受取済み":"未払い"}</button>
+                </div>
+              </li>
+            ))}
+          </ul>
+          {Object.keys(byCollector).length>0 && (
+            <div className="nh-break">
+              <div className="nh-break-title">集金者ごとの受取額</div>
+              {Object.entries(byCollector).map(([k,v]) => (
+                <div key={k} className="nh-break-row"><span>{k}</span><span>{yen(v)}</span></div>
+              ))}
+            </div>
+          )}
         </>)}
       </div>
     </section>
