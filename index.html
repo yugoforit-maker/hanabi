@@ -116,6 +116,7 @@
   .nh-sync-saving{color:var(--gold-soft);}
   .nh-sync-offline{color:var(--no);}
   .nh-sync-idle{color:var(--muted);}
+  .nh-offline{max-width:760px; margin:12px auto 0; padding:10px 14px; background:rgba(255,122,107,.15); border:1px solid var(--no); border-radius:10px; color:#ffc7bf; font-size:12.5px; text-align:center; line-height:1.5;}
   .nh-setup{max-width:520px; margin:0 auto; padding:36px 22px;}
   .nh-setup .nh-title{text-align:center; margin-bottom:14px;}
   .nh-setup-lead{font-size:14px; line-height:1.7; color:var(--ink); margin:0 0 16px;}
@@ -290,6 +291,7 @@ function App() {
   const [cfg, setCfg] = useState(null);            // {url, key}
   const [needSetup, setNeedSetup] = useState(false);
   const [sync, setSync] = useState("idle");        // synced | saving | offline
+  const [cloudOk, setCloudOk] = useState(false);   // クラウド読込に成功したか
 
   // 設定（SupabaseのURL/キー）を読み込む
   useEffect(() => {
@@ -300,7 +302,7 @@ function App() {
     setNeedSetup(true); setLoaded(true);
   }, []);
 
-  // クラウドからデータを読み込む（失敗時は端末キャッシュにフォールバック）
+  // クラウドからデータを読み込む
   useEffect(() => {
     if (!cfg) return;
     (async () => {
@@ -311,22 +313,26 @@ function App() {
         if (rows[0] && rows[0].data) {
           const d = normalizeData(rows[0].data);
           setPeople(d.people); setBlocks(d.blocks); setAssignments(d.assignments); setExpenses(d.expenses); setFees(d.fees); setCollectors(d.collectors);
+          try { localStorage.setItem(STORAGE_KEY, JSON.stringify(d)); } catch (e) {}
         }
+        setCloudOk(true);
         setSync("synced");
       } catch (e) {
         try { const raw = localStorage.getItem(STORAGE_KEY); if (raw) { const d = normalizeData(JSON.parse(raw)); setPeople(d.people); setBlocks(d.blocks); setAssignments(d.assignments); setExpenses(d.expenses); setFees(d.fees); setCollectors(d.collectors); } } catch (e2) {}
+        setCloudOk(false);
         setSync("offline");
       }
       setLoaded(true);
     })();
   }, [cfg]);
 
-  // 変更をクラウドへ保存（端末にもキャッシュ）
+  // 変更をクラウドへ保存（クラウド読込に成功した後のみ書き込む）
   useEffect(() => {
     if (!loaded || !cfg) return;
     const payload = { people, blocks, assignments, expenses, fees, collectors };
     const str = JSON.stringify(payload);
     try { localStorage.setItem(STORAGE_KEY, str); } catch (e) {}
+    if (!cloudOk) { setSync("offline"); return; }
     setSync("saving");
     const t = setTimeout(async () => {
       try {
@@ -339,7 +345,7 @@ function App() {
       } catch (e) { setSync("offline"); }
     }, 600);
     return () => clearTimeout(t);
-  }, [people, blocks, assignments, loaded, cfg]);
+  }, [people, blocks, assignments, expenses, fees, collectors, loaded, cfg, cloudOk]);
 
   const saveCfg = (url, key) => {
     const c = { url: url.trim().replace(/\/+$/, ""), key: key.trim() };
@@ -534,6 +540,9 @@ function App() {
           </button>
         ))}
       </nav>
+      {sync==="offline" && (
+        <div className="nh-offline">⚠ クラウドに接続できていません。この状態では変更は保存されません。ページを再読み込みしてください。</div>
+      )}
       <main className="nh-main">
         {tab==="roster" ? (
           <Roster people={people} groupColors={groupColors} onAdd={addPerson} onSetStatus={setStatus} onToggleDay={toggleDay} onRemove={removePerson} />
